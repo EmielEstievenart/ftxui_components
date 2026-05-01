@@ -37,26 +37,38 @@ int main()
                                          controller.update_viewport_col_count(view.viewport_col_count());
 
                                          const TextViewRenderData data = controller.render_data();
+                                         auto text_view = view.render(data,
+                                                                      [&lines](ftxui::Canvas& canvas, int first_line_index, int line_count, int first_column, int column_count)
+                                                                      {
+                                                                          for (int row = 0; row < line_count; ++row)
+                                                                          {
+                                                                              const std::string& line = lines.at(static_cast<std::size_t>(first_line_index + row));
+                                                                              if (first_column >= static_cast<int>(line.size()))
+                                                                              {
+                                                                                  continue;
+                                                                              }
+
+                                                                              const auto count = static_cast<std::size_t>(std::min(column_count, static_cast<int>(line.size()) - first_column));
+                                                                              canvas.DrawText(0, row * 4, line.substr(static_cast<std::size_t>(first_column), count));
+                                                                          }
+                                                                      });
+
+                                         auto constrained_box = ftxui::vbox({
+                                                                    ftxui::text("Constrained parent container") | ftxui::bold,
+                                                                    ftxui::separator(),
+                                                                    text_view | ftxui::flex,
+                                                                }) |
+                                                                ftxui::border |
+                                                                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 72) |
+                                                                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 18);
+
                                          return ftxui::vbox({
                                                     ftxui::text("ftxui_components TextView example") | ftxui::bold,
-                                                    ftxui::text("Press Esc to exit. Selected text is copied with Ctrl+C."),
+                                                    ftxui::text("Press Esc to exit. Resize the terminal: the inner TextView follows its parent box."),
                                                     ftxui::separator(),
-                                                    view.render(data,
-                                                                [&lines](ftxui::Canvas& canvas, int first_line_index, int line_count, int first_column, int column_count)
-                                                                {
-                                                                    for (int row = 0; row < line_count; ++row)
-                                                                    {
-                                                                        const std::string& line = lines.at(static_cast<std::size_t>(first_line_index + row));
-                                                                        if (first_column >= static_cast<int>(line.size()))
-                                                                        {
-                                                                            continue;
-                                                                        }
-
-                                                                        const auto count = static_cast<std::size_t>(std::min(column_count, static_cast<int>(line.size()) - first_column));
-                                                                        canvas.DrawText(0, row * 4, line.substr(static_cast<std::size_t>(first_column), count));
-                                                                    }
-                                                                }) |
-                                                        ftxui::flex,
+                                                    ftxui::filler(),
+                                                    ftxui::hbox({ftxui::filler(), constrained_box, ftxui::filler()}),
+                                                    ftxui::filler(),
                                                 }) |
                                                 ftxui::border;
                                      });
