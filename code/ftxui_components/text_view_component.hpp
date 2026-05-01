@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <ftxui/component/component.hpp>
@@ -21,6 +22,9 @@ struct TextViewComponentOption
     TextViewView::RenderCallback draw_content;
     std::string title;
     std::function<void(TextViewController&)> configure_controller;
+    bool selectable = false;
+    std::function<void(int)> on_selected_line_rendered;
+    std::function<void(int)> on_selected_line_submitted;
 };
 
 class TextViewComponent : public ftxui::ComponentBase
@@ -33,14 +37,26 @@ public:
     bool Focusable() const override;
 
     [[nodiscard]] bool focused() const;
+    [[nodiscard]] std::optional<int> selected_line() const;
     [[nodiscard]] TextViewController& controller();
     [[nodiscard]] const TextViewController& controller() const;
 
 private:
+    void set_selected_line(int line_index, bool keep_visible);
+    void move_selected_line(int delta);
+    void keep_selected_line_visible();
+    void notify_selected_line_rendered() const;
+    [[nodiscard]] int max_selected_line() const;
+
     TextViewController _controller;
     TextViewView _view;
     TextViewView::RenderCallback _draw_content;
     std::string _title;
+    int _total_line_count = 0;
+    bool _selectable      = false;
+    std::optional<int> _selected_line;
+    std::function<void(int)> _on_selected_line_rendered;
+    std::function<void(int)> _on_selected_line_submitted;
     ftxui::Box _box;
     ftxui::CapturedMouse _captured_mouse;
 };
