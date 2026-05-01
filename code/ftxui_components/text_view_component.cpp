@@ -11,14 +11,14 @@ TextViewComponent::TextViewComponent(TextViewComponentOption option)
     , _title(std::move(option.title))
     , _total_line_count(option.total_line_count)
     , _selectable(option.selectable)
-    , _on_selected_line_rendered(std::move(option.on_selected_line_rendered))
+    , _on_selected_line_changed(std::move(option.on_selected_line_changed))
     , _on_selected_line_submitted(std::move(option.on_selected_line_submitted))
 {
     _controller.set_content(option.total_line_count, option.max_line_width, std::move(option.line_at));
     if (_selectable && _total_line_count > 0)
     {
         _selected_line = 0;
-        notify_selected_line_rendered();
+        notify_selected_line_changed();
     }
 
     if (option.configure_controller)
@@ -31,11 +31,6 @@ ftxui::Element TextViewComponent::OnRender()
 {
     _controller.update_viewport_line_count(_view.viewport_line_count());
     _controller.update_viewport_col_count(_view.viewport_col_count());
-
-    if (_selectable && _selected_line.has_value() && _on_selected_line_rendered)
-    {
-        notify_selected_line_rendered();
-    }
 
     const TextViewRenderData data = _controller.render_data();
     ftxui::Element body           = _view.render(data, _draw_content) | ftxui::flex;
@@ -60,21 +55,38 @@ bool TextViewComponent::OnEvent(ftxui::Event event)
         return false;
     }
 
-    if (event.is_mouse())
+    if (!handle_mouse_focus(event))
     {
-        const bool inside = _box.Contain(event.mouse().x, event.mouse().y);
-        if (!inside && !_captured_mouse)
-        {
-            return false;
-        }
-
-        if (inside && event.mouse().motion == ftxui::Mouse::Pressed)
-        {
-            _captured_mouse = CaptureMouse(event);
-            TakeFocus();
-        }
+        return false;
     }
 
+    return handle_selectable_event(event) || handle_text_view_event(event);
+}
+
+bool TextViewComponent::handle_mouse_focus(ftxui::Event event)
+{
+    if (!event.is_mouse())
+    {
+        return true;
+    }
+
+    const bool inside = _box.Contain(event.mouse().x, event.mouse().y);
+    if (!inside && !_captured_mouse)
+    {
+        return false;
+    }
+
+    if (inside && event.mouse().button == ftxui::Mouse::Left && event.mouse().motion == ftxui::Mouse::Pressed)
+    {
+        _captured_mouse = CaptureMouse(event);
+        TakeFocus();
+    }
+
+    return true;
+}
+
+bool TextViewComponent::handle_selectable_event(ftxui::Event event)
+{
     if (_selectable && _selected_line.has_value())
     {
         const int page_step = std::max(1, _controller.viewport_line_count() - 1);
@@ -141,6 +153,11 @@ bool TextViewComponent::OnEvent(ftxui::Event event)
         }
     }
 
+    return false;
+}
+
+bool TextViewComponent::handle_text_view_event(ftxui::Event event)
+{
     const TextViewRenderData data = _controller.render_data();
     const TextViewEventResult result = _controller.parse_event(event, [&](const ftxui::Mouse& mouse) { return _view.mouse_to_text_position(data, mouse); });
 
@@ -200,7 +217,7 @@ void TextViewComponent::set_selected_line(int line_index, bool keep_visible)
     {
         keep_selected_line_visible();
     }
-    notify_selected_line_rendered();
+    notify_selected_line_changed();
 }
 
 void TextViewComponent::keep_selected_line_visible()
@@ -229,11 +246,11 @@ int TextViewComponent::max_selected_line() const
     return std::max(0, _total_line_count - 1);
 }
 
-void TextViewComponent::notify_selected_line_rendered() const
+void TextViewComponent::notify_selected_line_changed() const
 {
-    if (_selected_line.has_value() && _on_selected_line_rendered)
+    if (_selected_line.has_value() && _on_selected_line_changed)
     {
-        _on_selected_line_rendered(*_selected_line);
+        _on_selected_line_changed(*_selected_line);
     }
 }
 

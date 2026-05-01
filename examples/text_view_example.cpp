@@ -87,7 +87,6 @@ std::shared_ptr<TextViewComponent> make_text_view(const std::string& title,
                                                   const std::vector<std::string>& lines,
                                                   ftxui::Color highlight_color,
                                                   const std::optional<int>* selected_line = nullptr,
-                                                  std::function<void(int)> on_selected_line_rendered = {},
                                                   std::function<void(int)> on_selected_line_submitted = {})
 {
     TextViewComponentOption option;
@@ -98,7 +97,6 @@ std::shared_ptr<TextViewComponent> make_text_view(const std::string& title,
     option.title                     = title;
     option.configure_controller      = [highlight_color](TextViewController& controller) { controller.set_background_column_range(5, 16, highlight_color); };
     option.selectable                = selected_line != nullptr;
-    option.on_selected_line_rendered = std::move(on_selected_line_rendered);
     option.on_selected_line_submitted = std::move(on_selected_line_submitted);
     return std::make_shared<TextViewComponent>(std::move(option));
 }
@@ -121,7 +119,6 @@ int main()
                                       bottom_lines,
                                       ftxui::Color::Green,
                                       &bottom_selected_line,
-                                      [&](int line_index) { bottom_selected_line = line_index; },
                                       [&](int line_index) { bottom_submitted_line = line_index; });
 
     auto panes = ftxui::Container::Vertical({

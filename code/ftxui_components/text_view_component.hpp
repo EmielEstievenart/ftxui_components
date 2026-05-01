@@ -23,7 +23,7 @@ struct TextViewComponentOption
     std::string title;
     std::function<void(TextViewController&)> configure_controller;
     bool selectable = false;
-    std::function<void(int)> on_selected_line_rendered;
+    std::function<void(int)> on_selected_line_changed;
     std::function<void(int)> on_selected_line_submitted;
 };
 
@@ -42,10 +42,13 @@ public:
     [[nodiscard]] const TextViewController& controller() const;
 
 private:
+    bool handle_mouse_focus(ftxui::Event event);
+    bool handle_selectable_event(ftxui::Event event);
+    bool handle_text_view_event(ftxui::Event event);
     void set_selected_line(int line_index, bool keep_visible);
     void move_selected_line(int delta);
     void keep_selected_line_visible();
-    void notify_selected_line_rendered() const;
+    void notify_selected_line_changed() const;
     [[nodiscard]] int max_selected_line() const;
 
     TextViewController _controller;
@@ -55,7 +58,7 @@ private:
     int _total_line_count = 0;
     bool _selectable      = false;
     std::optional<int> _selected_line;
-    std::function<void(int)> _on_selected_line_rendered;
+    std::function<void(int)> _on_selected_line_changed;
     std::function<void(int)> _on_selected_line_submitted;
     ftxui::Box _box;
     ftxui::CapturedMouse _captured_mouse;
