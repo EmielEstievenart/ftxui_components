@@ -1,5 +1,7 @@
 add_library(
   ftxui_components
+  ftxui_components/text_view_component.cpp
+  ftxui_components/text_view_component.hpp
   ftxui_components/text_view_controller.cpp
   ftxui_components/text_view_controller.hpp
   ftxui_components/text_view_view.cpp

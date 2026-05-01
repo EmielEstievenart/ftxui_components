@@ -1,5 +1,4 @@
-#include <ftxui_components/text_view_controller.hpp>
-#include <ftxui_components/text_view_view.hpp>
+#include <ftxui_components/text_view_component.hpp>
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
@@ -7,87 +6,115 @@
 #include <ftxui/dom/elements.hpp>
 
 #include <algorithm>
+#include <cstddef>
+#include <memory>
 #include <string>
 #include <vector>
 
-int main()
+namespace
+{
+std::vector<std::string> make_lines(const std::string& label, int count)
 {
     std::vector<std::string> lines;
-    lines.reserve(100);
-    for (int index = 0; index < 100; ++index)
+    lines.reserve(static_cast<std::size_t>(count));
+    for (int index = 0; index < count; ++index)
     {
-        lines.push_back("Line " + std::to_string(index + 1) + " - scroll with arrows, PageUp/PageDown, Home/End, and drag to select text.");
+        lines.push_back(label + " line " + std::to_string(index + 1) + " - Tab/click switches focus; arrows, PageUp/PageDown, Home/End scroll the active view.");
     }
+    return lines;
+}
 
-    int max_line_width = 0;
+int max_line_width(const std::vector<std::string>& lines)
+{
+    int width = 0;
     for (const auto& line : lines)
     {
-        max_line_width = std::max(max_line_width, static_cast<int>(line.size()));
+        width = std::max(width, static_cast<int>(line.size()));
     }
+    return width;
+}
 
-    TextViewController controller;
-    TextViewView view;
-    controller.set_content(static_cast<int>(lines.size()), max_line_width, [&lines](int line_index) -> const std::string& { return lines.at(static_cast<std::size_t>(line_index)); });
-    controller.set_background_column_range(5, 12, ftxui::Color::Blue);
+TextViewView::RenderCallback draw_lines(const std::vector<std::string>& lines)
+{
+    return [&lines](ftxui::Canvas& canvas, int first_line_index, int line_count, int first_column, int column_count)
+    {
+        for (int row = 0; row < line_count; ++row)
+        {
+            const std::string& line = lines.at(static_cast<std::size_t>(first_line_index + row));
+            if (first_column >= static_cast<int>(line.size()))
+            {
+                continue;
+            }
+
+            const auto count = static_cast<std::size_t>(std::min(column_count, static_cast<int>(line.size()) - first_column));
+            canvas.DrawText(0, row * 4, line.substr(static_cast<std::size_t>(first_column), count));
+        }
+    };
+}
+
+std::shared_ptr<TextViewComponent> make_text_view(const std::string& title, const std::vector<std::string>& lines, ftxui::Color highlight_color)
+{
+    return std::make_shared<TextViewComponent>(TextViewComponentOption {
+        static_cast<int>(lines.size()),
+        max_line_width(lines),
+        [&lines](int line_index) -> const std::string& { return lines.at(static_cast<std::size_t>(line_index)); },
+        draw_lines(lines),
+        title,
+        [highlight_color](TextViewController& controller) { controller.set_background_column_range(5, 16, highlight_color); },
+    });
+}
+
+ftxui::Element focus_label(const std::string& label, const TextViewComponent& view)
+{
+    return ftxui::text((view.focused() ? "Active: " : "Inactive: ") + label) | (view.focused() ? ftxui::bold : ftxui::dim);
+}
+}
+
+int main()
+{
+    const std::vector<std::string> top_lines    = make_lines("Top", 100);
+    const std::vector<std::string> bottom_lines = make_lines("Bottom", 100);
+
+    auto top_view    = make_text_view("Top text view", top_lines, ftxui::Color::Blue);
+    auto bottom_view = make_text_view("Bottom text view", bottom_lines, ftxui::Color::Green);
+
+    auto panes = ftxui::Container::Vertical({
+        top_view,
+        bottom_view,
+    });
 
     auto screen = ftxui::ScreenInteractive::Fullscreen();
-    auto component = ftxui::Renderer([&]
+    auto component = ftxui::Renderer(panes,
+                                     [&]
                                      {
-                                         controller.update_viewport_line_count(view.viewport_line_count());
-                                         controller.update_viewport_col_count(view.viewport_col_count());
-
-                                         const TextViewRenderData data = controller.render_data();
-                                         auto text_view = view.render(data,
-                                                                      [&lines](ftxui::Canvas& canvas, int first_line_index, int line_count, int first_column, int column_count)
-                                                                      {
-                                                                          for (int row = 0; row < line_count; ++row)
-                                                                          {
-                                                                              const std::string& line = lines.at(static_cast<std::size_t>(first_line_index + row));
-                                                                              if (first_column >= static_cast<int>(line.size()))
-                                                                              {
-                                                                                  continue;
-                                                                              }
-
-                                                                              const auto count = static_cast<std::size_t>(std::min(column_count, static_cast<int>(line.size()) - first_column));
-                                                                              canvas.DrawText(0, row * 4, line.substr(static_cast<std::size_t>(first_column), count));
-                                                                          }
-                                                                      });
-
-                                         auto constrained_box = ftxui::vbox({
-                                                                    ftxui::text("Constrained parent container") | ftxui::bold,
-                                                                    ftxui::separator(),
-                                                                    text_view | ftxui::flex,
-                                                                }) |
-                                                                ftxui::border |
-                                                                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 72) |
-                                                                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 18);
-
                                          return ftxui::vbox({
-                                                    ftxui::text("ftxui_components TextView example") | ftxui::bold,
-                                                    ftxui::text("Press Esc to exit. Resize the terminal: the inner TextView follows its parent box."),
+                                                    ftxui::text("ftxui_components TextView focus example") | ftxui::bold,
+                                                    ftxui::text("Tab/click changes the active text view. The bottom view is constrained narrower to demonstrate resizing. Press Esc or q to exit."),
                                                     ftxui::separator(),
-                                                    ftxui::filler(),
-                                                    ftxui::hbox({ftxui::filler(), constrained_box, ftxui::filler()}),
-                                                    ftxui::filler(),
+                                                    focus_label("top", *top_view),
+                                                    top_view->Render() | ftxui::flex,
+                                                    ftxui::separator(),
+                                                    ftxui::hbox({
+                                                        ftxui::filler(),
+                                                        ftxui::vbox({
+                                                            focus_label("bottom", *bottom_view),
+                                                            bottom_view->Render() | ftxui::flex,
+                                                        }) | ftxui::flex | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 56),
+                                                        ftxui::filler(),
+                                                    }) | ftxui::flex,
                                                 }) |
                                                 ftxui::border;
                                      });
 
     component |= ftxui::CatchEvent([&](ftxui::Event event)
                                    {
-                                       if (event == ftxui::Event::Escape)
+                                       if (event == ftxui::Event::Escape || event == ftxui::Event::Character('q'))
                                        {
                                            screen.ExitLoopClosure()();
                                            return true;
                                        }
 
-                                       const TextViewRenderData data = controller.render_data();
-                                       const TextViewEventResult result = controller.parse_event(event, [&](const ftxui::Mouse& mouse) { return view.mouse_to_text_position(data, mouse); });
-                                       if (result.request_exit)
-                                       {
-                                           screen.ExitLoopClosure()();
-                                       }
-                                       return result.handled;
+                                       return false;
                                    });
 
     screen.Loop(component);
