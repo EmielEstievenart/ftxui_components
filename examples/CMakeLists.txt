@@ -1,0 +1,4 @@
+add_executable(ftxui_components_text_view_example text_view_example.cpp)
+
+target_compile_features(ftxui_components_text_view_example PRIVATE cxx_std_17)
+target_link_libraries(ftxui_components_text_view_example PRIVATE ftxui_components)

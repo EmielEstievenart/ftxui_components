@@ -1,14 +1,46 @@
-add_library(
-  ftxui_components
-  text_view_controller.cpp
-  ftxui_components/text_view_controller.hpp
-  text_view_view.cpp
-  ftxui_components/text_view_view.hpp)
+cmake_minimum_required(VERSION 3.21)
 
-target_include_directories(ftxui_components PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+project(ftxui_components LANGUAGES CXX)
 
-target_link_libraries(ftxui_components PUBLIC component)
+if(NOT TARGET component)
+  set(FTXUI_BUILD_DOCS
+      OFF
+      CACHE BOOL "Disable FTXUI docs" FORCE)
+  set(FTXUI_BUILD_EXAMPLES
+      OFF
+      CACHE BOOL "Disable FTXUI examples" FORCE)
+  set(FTXUI_BUILD_TESTS
+      OFF
+      CACHE BOOL "Disable FTXUI tests" FORCE)
+  set(FTXUI_BUILD_TESTS_FUZZER
+      OFF
+      CACHE BOOL "Disable FTXUI fuzz tests" FORCE)
+  set(FTXUI_BUILD_MODULES
+      OFF
+      CACHE BOOL "Disable FTXUI C++20 modules" FORCE)
 
-if(WIN32)
-  target_link_libraries(ftxui_components PRIVATE user32)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../ftxui/CMakeLists.txt")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../ftxui"
+                     "${CMAKE_CURRENT_BINARY_DIR}/ftxui")
+  else()
+    message(
+      FATAL_ERROR
+        "FTXUI was not found at ../ftxui. Initialize the libs/ftxui submodule first."
+    )
+  endif()
+endif()
+
+add_subdirectory(code)
+
+if(PROJECT_IS_TOP_LEVEL)
+  set(FTXUI_COMPONENTS_BUILD_EXAMPLES_DEFAULT ON)
+else()
+  set(FTXUI_COMPONENTS_BUILD_EXAMPLES_DEFAULT OFF)
+endif()
+
+option(FTXUI_COMPONENTS_BUILD_EXAMPLES "Build ftxui_components examples"
+       ${FTXUI_COMPONENTS_BUILD_EXAMPLES_DEFAULT})
+
+if(FTXUI_COMPONENTS_BUILD_EXAMPLES)
+  add_subdirectory(examples)
 endif()
