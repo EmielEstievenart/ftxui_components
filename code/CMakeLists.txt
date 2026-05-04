@@ -5,7 +5,9 @@ add_library(
   ftxui_components/text_view_controller.cpp
   ftxui_components/text_view_controller.hpp
   ftxui_components/text_view_view.cpp
-  ftxui_components/text_view_view.hpp)
+  ftxui_components/text_view_view.hpp
+  ftxui_components/toast_component.cpp
+  ftxui_components/toast_component.hpp)
 
 target_include_directories(ftxui_components PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(ftxui_components PUBLIC cxx_std_17)
