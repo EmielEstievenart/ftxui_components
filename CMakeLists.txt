@@ -19,13 +19,13 @@ if(NOT TARGET component)
       OFF
       CACHE BOOL "Disable FTXUI C++20 modules" FORCE)
 
-  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../ftxui/CMakeLists.txt")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../ftxui"
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libs/ftxui/CMakeLists.txt")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/libs/ftxui"
                      "${CMAKE_CURRENT_BINARY_DIR}/ftxui")
   else()
     message(
       FATAL_ERROR
-        "FTXUI was not found at ../ftxui. Initialize the libs/ftxui submodule first."
+        "FTXUI was not found at libs/ftxui. Initialize this repository's libs/ftxui submodule first."
     )
   endif()
 endif()
