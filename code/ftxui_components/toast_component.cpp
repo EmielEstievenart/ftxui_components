@@ -30,7 +30,7 @@ void apply_completion_timeout(ToastOption& option)
 {
     if (option.dismiss_when_done && option.progress.has_value() && normalized_progress(option.progress) >= 1.0F && option.timeout <= std::chrono::milliseconds(0))
     {
-        option.timeout = std::chrono::seconds(2);
+        option.timeout = std::chrono::seconds(4);
     }
 }
 

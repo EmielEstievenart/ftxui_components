@@ -32,7 +32,7 @@ struct ToastOption
     std::string message;
     ToastLevel level = ToastLevel::Info;
     std::optional<float> progress;
-    std::chrono::milliseconds timeout = std::chrono::seconds(3);
+    std::chrono::milliseconds timeout = std::chrono::seconds(6);
     bool dismiss_when_done = true;
 };
 
