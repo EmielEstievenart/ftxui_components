@@ -1,6 +1,7 @@
 #include <ftxui_components/toast_component.hpp>
 
 #include <algorithm>
+#include <ftxui/screen/box.hpp>
 #include <utility>
 
 namespace
@@ -15,8 +16,7 @@ float normalized_progress(std::optional<float> progress)
     return std::clamp(*progress, 0.0F, 1.0F);
 }
 
-std::optional<std::chrono::steady_clock::time_point> expiry_for(const ToastOption& option,
-                                                                std::chrono::steady_clock::time_point now)
+std::optional<std::chrono::steady_clock::time_point> expiry_for(const ToastOption& option, std::chrono::steady_clock::time_point now)
 {
     if (option.timeout <= std::chrono::milliseconds(0))
     {
@@ -49,10 +49,75 @@ ftxui::Color color_for(ToastLevel level, const ToastStyle& style)
         return style.info;
     }
 }
+
+int box_width(const ftxui::Box& box)
+{
+    return box.IsEmpty() ? 0 : box.x_max - box.x_min + 1;
 }
 
-ToastHostComponent::ToastHostComponent(ftxui::Component child, ToastHostOption option)
-    : _option(option)
+int box_height(const ftxui::Box& box)
+{
+    return box.IsEmpty() ? 0 : box.y_max - box.y_min + 1;
+}
+
+void layout_element(ftxui::Element& element, ftxui::Box box)
+{
+    ftxui::Node::Status status;
+    element->Check(&status);
+    constexpr int max_iterations = 20;
+    while (status.need_iteration && status.iteration < max_iterations)
+    {
+        element->ComputeRequirement();
+        element->SetBox(box);
+        status.need_iteration = false;
+        ++status.iteration;
+        element->Check(&status);
+    }
+}
+
+int fitted_height(ftxui::Element element, int width)
+{
+    if (element == nullptr || width <= 0)
+    {
+        return 0;
+    }
+
+    ftxui::Box measurement_box;
+    measurement_box.x_min = 0;
+    measurement_box.x_max = width - 1;
+    measurement_box.y_min = 0;
+    measurement_box.y_max = 100000;
+    layout_element(element, measurement_box);
+    return element->requirement().min_y;
+}
+
+ftxui::Element render_toast_option(const ToastOption& toast, const ToastStyle& style)
+{
+    ftxui::Elements lines;
+    const ftxui::Color accent = color_for(toast.level, style);
+    if (!toast.title.empty())
+    {
+        lines.push_back(ftxui::text(toast.title) | ftxui::bold | ftxui::color(accent));
+    }
+    if (!toast.message.empty())
+    {
+        lines.push_back(ftxui::paragraph(toast.message));
+    }
+    if (toast.progress.has_value())
+    {
+        lines.push_back(ftxui::gauge(normalized_progress(toast.progress)) | ftxui::color(accent));
+    }
+
+    if (lines.empty())
+    {
+        lines.push_back(ftxui::text(""));
+    }
+
+    return ftxui::vbox(std::move(lines)) | ftxui::borderRounded | ftxui::bgcolor(style.background);
+}
+}
+
+ToastHostComponent::ToastHostComponent(ftxui::Component child, ToastHostOption option) : _option(option)
 {
     Add(std::move(child));
     _timer = std::thread([this] { timer_loop(); });
@@ -76,7 +141,7 @@ ToastId ToastHostComponent::show(ToastOption option)
     const auto now = std::chrono::steady_clock::now();
     apply_completion_timeout(option);
     const auto expires_at = expiry_for(option, now);
-    ToastId id     = 0;
+    ToastId id            = 0;
     {
         std::lock_guard<std::mutex> lock(_mutex);
         id = _next_id++;
@@ -199,13 +264,7 @@ void ToastHostComponent::timer_loop()
 
 void ToastHostComponent::prune_expired(std::chrono::steady_clock::time_point now)
 {
-    _toasts.erase(std::remove_if(_toasts.begin(),
-                                 _toasts.end(),
-                                 [now](const ToastState& toast)
-                                 {
-                                     return toast.expires_at.has_value() && *toast.expires_at <= now;
-                                 }),
-                  _toasts.end());
+    _toasts.erase(std::remove_if(_toasts.begin(), _toasts.end(), [now](const ToastState& toast) { return toast.expires_at.has_value() && *toast.expires_at <= now; }), _toasts.end());
 }
 
 std::optional<std::chrono::steady_clock::time_point> ToastHostComponent::next_expiry_locked() const
@@ -229,48 +288,88 @@ std::optional<std::chrono::steady_clock::time_point> ToastHostComponent::next_ex
 
 ftxui::Element ToastHostComponent::render_toasts(const std::vector<ToastState>& toasts) const
 {
-    ftxui::Elements rendered;
-    const int max_visible = std::max(1, _option.max_visible);
-    const auto first      = toasts.size() > static_cast<std::size_t>(max_visible)
-                            ? toasts.size() - static_cast<std::size_t>(max_visible)
-                            : std::size_t{0};
-
-    for (std::size_t index = first; index < toasts.size(); ++index)
+    class ReflectedToastStack : public ftxui::Node
     {
-        rendered.push_back(render_toast(toasts[index]) | ftxui::clear_under);
-    }
+    public:
+        ReflectedToastStack(std::vector<ToastState> toasts, ToastHostOption option) : _toasts(std::move(toasts)), _option(std::move(option)) { }
 
-    auto stack = ftxui::vbox(std::move(rendered)) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, std::max(20, _option.width));
-    return ftxui::vbox({
-               ftxui::hbox({ftxui::filler(), stack}),
-               ftxui::filler(),
-           }) |
-           ftxui::flex;
+        void ComputeRequirement() override
+        {
+            requirement_             = ftxui::Requirement {};
+            requirement_.flex_grow_x = 1;
+            requirement_.flex_grow_y = 1;
+        }
+
+        void SetBox(ftxui::Box box) override
+        {
+            Node::SetBox(box);
+
+            // Use FTXUI's assigned layout box as the reflected available area.
+            children_.clear();
+            children_.push_back(build_layout(box));
+            layout_element(children_[0], box);
+        }
+
+    private:
+        std::size_t first_visible_index(ftxui::Box box) const
+        {
+            const int available_height = box_height(box);
+            if (_toasts.empty() || available_height <= 0)
+            {
+                return _toasts.size();
+            }
+
+            const int max_visible     = std::max(1, _option.max_visible);
+            const int toast_width     = std::min(std::max(20, _option.width), box_width(box));
+            int remaining_height      = available_height;
+            std::size_t visible_count = 0;
+
+            for (std::size_t reverse_index = _toasts.size(); reverse_index > 0 && visible_count < static_cast<std::size_t>(max_visible); --reverse_index)
+            {
+                const int toast_height = std::max(1, fitted_height(render_toast_option(_toasts[reverse_index - 1].option, _option.style), toast_width));
+                if (toast_height > remaining_height && visible_count > 0)
+                {
+                    break;
+                }
+
+                ++visible_count;
+                remaining_height -= toast_height;
+                if (remaining_height <= 0)
+                {
+                    break;
+                }
+            }
+
+            return _toasts.size() - visible_count;
+        }
+
+        ftxui::Element build_layout(ftxui::Box box) const
+        {
+            ftxui::Elements rendered;
+            const std::size_t first = first_visible_index(box);
+            for (std::size_t index = first; index < _toasts.size(); ++index)
+            {
+                rendered.push_back(render_toast_option(_toasts[index].option, _option.style) | ftxui::clear_under);
+            }
+
+            auto stack = ftxui::vbox(std::move(rendered)) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, std::max(20, _option.width));
+            return ftxui::vbox({
+                       ftxui::hbox({ftxui::filler(), stack}),
+                       ftxui::filler(),
+                   }) |
+                   ftxui::flex;
+        }
+
+        std::vector<ToastState> _toasts;
+        ToastHostOption _option;
+    };
+
+    return std::make_shared<ReflectedToastStack>(toasts, _option);
 }
 
 ftxui::Element ToastHostComponent::render_toast(const ToastState& toast) const
 {
-    ftxui::Elements lines;
-    const ftxui::Color accent = color_for(toast.option.level, _option.style);
-    if (!toast.option.title.empty())
-    {
-        lines.push_back(ftxui::text(toast.option.title) | ftxui::bold | ftxui::color(accent));
-    }
-    if (!toast.option.message.empty())
-    {
-        lines.push_back(ftxui::paragraph(toast.option.message));
-    }
-    if (toast.option.progress.has_value())
-    {
-        lines.push_back(ftxui::gauge(normalized_progress(toast.option.progress)) | ftxui::color(accent));
-    }
-
-    if (lines.empty())
-    {
-        lines.push_back(ftxui::text(""));
-    }
-
-    return ftxui::vbox(std::move(lines)) | ftxui::borderRounded | ftxui::bgcolor(_option.style.background);
+    return render_toast_option(toast.option, _option.style);
 }
 
 ftxui::Component ToastHost(ftxui::Component child, ToastHostOption option)
