@@ -1,5 +1,7 @@
 add_library(
   ftxui_components
+  ftxui_components/clipboard.cpp
+  ftxui_components/clipboard.hpp
   ftxui_components/text_view_component.cpp
   ftxui_components/text_view_component.hpp
   ftxui_components/text_view_controller.cpp
