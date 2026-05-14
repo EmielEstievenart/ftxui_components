@@ -1,12 +1,68 @@
 #include <ftxui_components/text_view_view.hpp>
 
+#include <ftxui/component/event.hpp>
 #include <ftxui/component/mouse.hpp>
+#include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
+#include <ftxui/dom/node.hpp>
 
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 namespace
 {
+
+void request_redraw()
+{
+    if (auto* screen = ftxui::ScreenInteractive::Active())
+    {
+        screen->PostEvent(ftxui::Event::Custom);
+    }
+}
+
+class ReflectAndRequestRedraw : public ftxui::Node
+{
+public:
+    ReflectAndRequestRedraw(ftxui::Element child, ftxui::Box& reflected_box) : ftxui::Node(ftxui::unpack(std::move(child))), _reflected_box(reflected_box) { }
+
+    void ComputeRequirement() final
+    {
+        ftxui::Node::ComputeRequirement();
+        requirement_ = children_[0]->requirement();
+    }
+
+    void SetBox(ftxui::Box box) final
+    {
+        _assigned_box = box;
+        ftxui::Node::SetBox(box);
+        children_[0]->SetBox(box);
+    }
+
+    void Render(ftxui::Screen& screen) final
+    {
+        const ftxui::Box final_box = ftxui::Box::Intersection(screen.stencil, _assigned_box);
+        if (_reflected_box != final_box)
+        {
+            _reflected_box = final_box;
+            request_redraw();
+        }
+
+        ftxui::Node::Render(screen);
+    }
+
+private:
+    ftxui::Box& _reflected_box;
+    ftxui::Box _assigned_box;
+};
+
+ftxui::Decorator reflect_and_request_redraw(ftxui::Box& box)
+{
+    return [&box](ftxui::Element child) -> ftxui::Element
+    {
+        return std::make_shared<ReflectAndRequestRedraw>(std::move(child), box);
+    };
+}
 
 void invalidate_box(ftxui::Box& box)
 {
@@ -229,7 +285,7 @@ ftxui::Element TextViewView::render(const TextViewRenderData& input_data, const 
     const TextViewRenderData data = normalize_render_data(input_data);
     return ftxui::vbox({
                ftxui::hbox({
-                   render_content(data, draw_content) | ftxui::flex | ftxui::reflect(_content_box),
+                   render_content(data, draw_content) | ftxui::flex | reflect_and_request_redraw(_content_box),
                    render_scrollbar(data),
                }) | ftxui::flex,
                render_hscrollbar(data),
