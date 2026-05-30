@@ -118,11 +118,11 @@ int main()
     {
         if (top_active)
         {
-            top_view->scroll_up();
+            top_view->user_scroll_up();
         }
         else
         {
-            bottom_view->select_previous();
+            bottom_view->user_select_previous();
         }
     };
 
@@ -130,11 +130,11 @@ int main()
     {
         if (top_active)
         {
-            top_view->scroll_down();
+            top_view->user_scroll_down();
         }
         else
         {
-            bottom_view->select_next();
+            bottom_view->user_select_next();
         }
     };
 
@@ -200,11 +200,11 @@ int main()
             {
                 if (top_active)
                 {
-                    top_view->page_up();
+                    top_view->user_page_up();
                 }
                 else
                 {
-                    bottom_view->page_selected_up();
+                    bottom_view->user_page_selected_up();
                 }
                 return true;
             }
@@ -213,11 +213,11 @@ int main()
             {
                 if (top_active)
                 {
-                    top_view->page_down();
+                    top_view->user_page_down();
                 }
                 else
                 {
-                    bottom_view->page_selected_down();
+                    bottom_view->user_page_selected_down();
                 }
                 return true;
             }
@@ -226,11 +226,11 @@ int main()
             {
                 if (top_active)
                 {
-                    top_view->scroll_to_top();
+                    top_view->user_scroll_to_top();
                 }
                 else
                 {
-                    bottom_view->select_first_line();
+                    bottom_view->user_select_first_line();
                 }
                 return true;
             }
@@ -239,18 +239,18 @@ int main()
             {
                 if (top_active)
                 {
-                    top_view->scroll_to_bottom();
+                    top_view->user_scroll_to_bottom();
                 }
                 else
                 {
-                    bottom_view->select_last_line();
+                    bottom_view->user_select_last_line();
                 }
                 return true;
             }
 
             if (event == ftxui::Event::Return && !top_active)
             {
-                bottom_view->submit_selected_line();
+                bottom_view->user_submit_selected_line();
                 return true;
             }
 
@@ -281,7 +281,7 @@ int main()
                     if (bottom_position.has_value())
                     {
                         top_active = false;
-                        bottom_view->select_line_at(*bottom_position);
+                        bottom_view->user_select_line_at(*bottom_position);
                         return true;
                     }
                 }

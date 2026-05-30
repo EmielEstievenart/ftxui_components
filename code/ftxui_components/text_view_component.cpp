@@ -104,22 +104,22 @@ void TextViewComponent::set_selected_line(int line_index, bool keep_visible)
     set_selected_line(line_index, keep_visible, -1);
 }
 
-void TextViewComponent::select_line_at(TextViewPosition position, bool keep_visible)
+void TextViewComponent::user_select_line_at(TextViewPosition position, bool keep_visible)
 {
     set_selected_line(position.line_index, keep_visible, -1);
 }
 
-void TextViewComponent::select_previous()
+void TextViewComponent::user_select_previous()
 {
-    move_selected_line(-_selector_step);
+    user_move_selected_line(-_selector_step);
 }
 
-void TextViewComponent::select_next()
+void TextViewComponent::user_select_next()
 {
-    move_selected_line(_selector_step);
+    user_move_selected_line(_selector_step);
 }
 
-void TextViewComponent::page_selected_up()
+void TextViewComponent::user_page_selected_up()
 {
     if (!_selected_line.has_value())
     {
@@ -130,7 +130,7 @@ void TextViewComponent::page_selected_up()
     set_selected_line(*_selected_line - page_step, true, -1);
 }
 
-void TextViewComponent::page_selected_down()
+void TextViewComponent::user_page_selected_down()
 {
     if (!_selected_line.has_value())
     {
@@ -141,17 +141,17 @@ void TextViewComponent::page_selected_down()
     set_selected_line(*_selected_line + page_step, true, 1);
 }
 
-void TextViewComponent::select_first_line()
+void TextViewComponent::user_select_first_line()
 {
     set_selected_line(0, true);
 }
 
-void TextViewComponent::select_last_line()
+void TextViewComponent::user_select_last_line()
 {
     set_selected_line(max_selectable_line(), true, -1);
 }
 
-void TextViewComponent::submit_selected_line() const
+void TextViewComponent::user_submit_selected_line() const
 {
     if (_selected_line.has_value() && _on_selected_line_submitted)
     {
@@ -159,47 +159,47 @@ void TextViewComponent::submit_selected_line() const
     }
 }
 
-void TextViewComponent::scroll_up(int amount)
+void TextViewComponent::user_scroll_up(int amount)
 {
     _controller.scroll_up(amount);
 }
 
-void TextViewComponent::scroll_down(int amount)
+void TextViewComponent::user_scroll_down(int amount)
 {
     _controller.scroll_down(amount);
 }
 
-void TextViewComponent::page_up()
+void TextViewComponent::user_page_up()
 {
     _controller.page_up();
 }
 
-void TextViewComponent::page_down()
+void TextViewComponent::user_page_down()
 {
     _controller.page_down();
 }
 
-void TextViewComponent::scroll_to_top()
+void TextViewComponent::user_scroll_to_top()
 {
     _controller.scroll_to_top();
 }
 
-void TextViewComponent::scroll_to_bottom()
+void TextViewComponent::user_scroll_to_bottom()
 {
     _controller.scroll_to_bottom();
 }
 
-void TextViewComponent::scroll_left(int amount)
+void TextViewComponent::user_scroll_left(int amount)
 {
     _controller.scroll_left(amount);
 }
 
-void TextViewComponent::scroll_right(int amount)
+void TextViewComponent::user_scroll_right(int amount)
 {
     _controller.scroll_right(amount);
 }
 
-void TextViewComponent::move_selected_line(int delta)
+void TextViewComponent::user_move_selected_line(int delta)
 {
     if (!_selected_line.has_value() || _total_line_count <= 0)
     {

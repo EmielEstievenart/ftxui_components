@@ -31,27 +31,30 @@ public:
     [[nodiscard]] TextViewController& controller();
     [[nodiscard]] const TextViewController& controller() const;
     [[nodiscard]] std::optional<TextViewPosition> text_position_at(int x, int y) const;
+    // Configuration
     void update_content_size(int total_line_count, int max_line_width);
     void set_selectable(bool selectable);
     void set_selector_step(int selector_step);
     void set_selected_line(int line_index, bool keep_visible);
-    void select_line_at(TextViewPosition position, bool keep_visible = true);
-    void select_previous();
-    void select_next();
-    void page_selected_up();
-    void page_selected_down();
-    void select_first_line();
-    void select_last_line();
-    void submit_selected_line() const;
-    void move_selected_line(int delta);
-    void scroll_up(int amount = 1);
-    void scroll_down(int amount = 1);
-    void page_up();
-    void page_down();
-    void scroll_to_top();
-    void scroll_to_bottom();
-    void scroll_left(int amount = 1);
-    void scroll_right(int amount = 1);
+
+    // User interaction
+    void user_select_line_at(TextViewPosition position, bool keep_visible = true);
+    void user_select_previous();
+    void user_select_next();
+    void user_page_selected_up();
+    void user_page_selected_down();
+    void user_select_first_line();
+    void user_select_last_line();
+    void user_submit_selected_line() const;
+    void user_move_selected_line(int delta);
+    void user_scroll_up(int amount = 1);
+    void user_scroll_down(int amount = 1);
+    void user_page_up();
+    void user_page_down();
+    void user_scroll_to_top();
+    void user_scroll_to_bottom();
+    void user_scroll_left(int amount = 1);
+    void user_scroll_right(int amount = 1);
 
 private:
     void set_selected_line(int line_index, bool keep_visible, int alignment_direction);
