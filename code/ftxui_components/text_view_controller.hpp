@@ -1,10 +1,8 @@
 #pragma once
 
-#include <functional>
 #include <ftxui/screen/color.hpp>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 // Describes an optional background-color highlight over a contiguous column range.
@@ -61,15 +59,12 @@ struct TextViewRenderData
 class TextViewController
 {
 public:
-    using LineAccessor = std::function<const std::string&(int)>;
-
     TextViewController() = default;
 
     // --- Content management ---
 
-    // Replace the content accessor and dimensions.
-    // Clears selection, clamps scroll position. Respects follow-bottom.
-    void set_content(int total_line_count, int max_line_width, LineAccessor line_at);
+    // Replace the content dimensions. Clamps scroll position and respects follow-bottom.
+    void set_content(int total_line_count, int max_line_width);
 
     // Update the content dimensions while keeping the existing accessor.
     // Handles follow-bottom auto-scroll and horizontal clamping.
@@ -99,21 +94,6 @@ public:
     void set_background_column_range(int col_start, int col_end, ftxui::Color color);
     void clear_background_column_range();
 
-    // --- Text selection ---
-
-    void begin_selection(TextViewPosition position);
-    void update_selection(TextViewPosition position);
-    void end_selection(std::optional<TextViewPosition> position);
-    void clear_selection();
-
-    [[nodiscard]] bool selection_in_progress() const;
-    [[nodiscard]] std::optional<std::pair<TextViewPosition, TextViewPosition>> selection_bounds() const;
-    [[nodiscard]] std::string selection_text() const;
-
-    // --- Clipboard ---
-
-    [[nodiscard]] bool copy_selection_to_clipboard() const;
-
     // --- Render ---
 
     // Build a complete render snapshot. Includes selection decorations.
@@ -132,21 +112,13 @@ private:
     [[nodiscard]] int max_first_visible_line() const;
     [[nodiscard]] int max_first_visible_col() const;
     void clamp_scroll_position();
-    [[nodiscard]] TextViewPosition clamp_selection_position(TextViewPosition position) const;
-    [[nodiscard]] const std::string& line_at(int index) const;
 
     int _total_line_count = 0;
     int _max_line_width   = 0;
-    LineAccessor _line_at;
     int _viewport_line_count = 1;
     int _first_visible_line  = 0;
     bool _follow_bottom      = true;
     int _first_visible_col   = 0;
     int _viewport_col_count  = 1;
     TextViewColumnHighlight _col_highlight;
-
-    // Selection state
-    bool _selection_in_progress = false;
-    std::optional<TextViewPosition> _selection_anchor;
-    std::optional<TextViewPosition> _selection_focus;
 };

@@ -14,7 +14,7 @@ TextViewComponent::TextViewComponent(TextViewComponentOption option)
     , _on_selected_line_changed(std::move(option.on_selected_line_changed))
     , _on_selected_line_submitted(std::move(option.on_selected_line_submitted))
 {
-    _controller.set_content(option.total_line_count, option.max_line_width, std::move(option.line_at));
+    _controller.set_content(option.total_line_count, option.widest_line_width);
     if (_selectable && _total_line_count > 0)
     {
         _selected_line = 0;
@@ -249,8 +249,8 @@ void TextViewComponent::keep_selected_line_visible()
         return;
     }
 
-    _selected_line = std::clamp(*_selected_line, 0, max_selected_line());
-    _selected_line = align_selected_line(*_selected_line, -1);
+    _selected_line                = std::clamp(*_selected_line, 0, max_selected_line());
+    _selected_line                = align_selected_line(*_selected_line, -1);
     const int selected_first_line = *_selected_line;
     const int selected_last_line  = std::min(max_selected_line(), selected_first_line + _selector_step - 1);
 
@@ -287,11 +287,11 @@ int TextViewComponent::align_selected_line(int line_index, int alignment_directi
         return 0;
     }
 
-    const int max_line            = max_selected_line();
-    const int max_selectable      = max_selectable_line();
-    const int clamped_line        = std::clamp(line_index, 0, max_line);
-    const int selector_remainder  = clamped_line % _selector_step;
-    int aligned_line              = clamped_line - selector_remainder;
+    const int max_line           = max_selected_line();
+    const int max_selectable     = max_selectable_line();
+    const int clamped_line       = std::clamp(line_index, 0, max_line);
+    const int selector_remainder = clamped_line % _selector_step;
+    int aligned_line             = clamped_line - selector_remainder;
 
     if (alignment_direction > 0 && selector_remainder != 0)
     {

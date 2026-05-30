@@ -14,16 +14,15 @@
 
 struct TextViewComponentOption
 {
-    int total_line_count = 0;
-    int max_line_width   = 0;
-    TextViewController::LineAccessor line_at;
-    TextViewView::RenderCallback draw_content;
-    std::string title;
-    std::function<void(TextViewController&)> configure_controller;
-    bool selectable = false;
-    int selector_step = 1;
-    std::function<void(int)> on_selected_line_changed;
-    std::function<void(int)> on_selected_line_submitted;
+    int total_line_count  = 0;                                     // Total number of lines available to render, used for vertical scrolling.
+    int widest_line_width = 0;                                     // Width of the widest line, used for horizontal scrolling.
+    TextViewView::RenderCallback draw_content;                     // Renders the text view content area.
+    std::string title;                                             // Optional title shown around the text view.
+    std::function<void(TextViewController&)> configure_controller; // Applies caller-specific controller setup.
+    bool selectable   = false;                                     // Enables line selection when true.
+    int selector_step = 1;                                         // Number of lines moved by each selection step.
+    std::function<void(int)> on_selected_line_changed;             // Called after the selected line changes.
+    std::function<void(int)> on_selected_line_submitted;           // Called when the selected line is submitted.
 };
 
 class TextViewComponent : public ftxui::ComponentBase
