@@ -101,9 +101,9 @@ std::shared_ptr<TextViewComponent> make_text_view(const std::string& title,
     return std::make_shared<TextViewComponent>(std::move(option));
 }
 
-ftxui::Element focus_label(const std::string& label, const TextViewComponent& view)
+ftxui::Element focus_label(const std::string& label, bool active)
 {
-    return ftxui::text((view.focused() ? "Active: " : "Inactive: ") + label) | (view.focused() ? ftxui::bold : ftxui::dim);
+    return ftxui::text((active ? "Active: " : "Inactive: ") + label) | (active ? ftxui::bold : ftxui::dim);
 }
 }
 
@@ -120,15 +120,34 @@ int main()
                                       ftxui::Color::Green,
                                       &bottom_selected_line,
                                       [&](int line_index) { bottom_submitted_line = line_index; });
+    bool top_active = true;
 
-    auto panes = ftxui::Container::Vertical({
-        top_view,
-        bottom_view,
-    });
+    auto scroll_active_up = [&]
+    {
+        if (top_active)
+        {
+            top_view->scroll_up();
+        }
+        else
+        {
+            bottom_view->select_previous();
+        }
+    };
+
+    auto scroll_active_down = [&]
+    {
+        if (top_active)
+        {
+            top_view->scroll_down();
+        }
+        else
+        {
+            bottom_view->select_next();
+        }
+    };
 
     auto screen = ftxui::ScreenInteractive::Fullscreen();
-    auto component = ftxui::Renderer(panes,
-                                     [&]
+    auto component = ftxui::Renderer([&]
                                      {
                                          bottom_selected_line = bottom_view->selected_line();
                                          auto top_rendered    = top_view->Render() | ftxui::flex;
@@ -139,16 +158,16 @@ int main()
                                                     ftxui::text("Tab/click changes the active text view. The bottom view is constrained narrower to demonstrate resizing. Press Esc or q to exit."),
                                                     ftxui::text("Bottom view select mode: Up/Down moves the selected line, PageUp/PageDown jumps, Enter submits."),
                                                     ftxui::separator(),
-                                                    focus_label("top", *top_view),
-                                                    top_rendered,
+                                                     focus_label("top", top_active),
+                                                     top_rendered,
                                                     ftxui::separator(),
                                                     ftxui::text("Current bottom selection: " + (bottom_selected_line.has_value() ? bottom_lines.at(static_cast<std::size_t>(*bottom_selected_line)) : std::string("none"))),
                                                     ftxui::text("Submitted bottom selection: " + (bottom_submitted_line.has_value() ? bottom_lines.at(static_cast<std::size_t>(*bottom_submitted_line)) : std::string("none"))),
                                                     ftxui::hbox({
                                                         ftxui::filler(),
                                                         ftxui::vbox({
-                                                            focus_label("bottom", *bottom_view),
-                                                            bottom_rendered,
+                                                             focus_label("bottom", !top_active),
+                                                             bottom_rendered,
                                                         }) | ftxui::flex | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 56),
                                                         ftxui::filler(),
                                                     }) | ftxui::flex,
@@ -162,6 +181,115 @@ int main()
                                        {
                                            screen.ExitLoopClosure()();
                                            return true;
+                                       }
+
+                                       if (event == ftxui::Event::Tab)
+                                       {
+                                           top_active = !top_active;
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::ArrowUp || event == ftxui::Event::Character('k'))
+                                       {
+                                           scroll_active_up();
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::ArrowDown || event == ftxui::Event::Character('j'))
+                                       {
+                                           scroll_active_down();
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::PageUp)
+                                       {
+                                           if (top_active)
+                                           {
+                                               top_view->page_up();
+                                           }
+                                           else
+                                           {
+                                               bottom_view->page_selected_up();
+                                           }
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::PageDown)
+                                       {
+                                           if (top_active)
+                                           {
+                                               top_view->page_down();
+                                           }
+                                           else
+                                           {
+                                               bottom_view->page_selected_down();
+                                           }
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::Home)
+                                       {
+                                           if (top_active)
+                                           {
+                                               top_view->scroll_to_top();
+                                           }
+                                           else
+                                           {
+                                               bottom_view->select_first_line();
+                                           }
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::End)
+                                       {
+                                           if (top_active)
+                                           {
+                                               top_view->scroll_to_bottom();
+                                           }
+                                           else
+                                           {
+                                               bottom_view->select_last_line();
+                                           }
+                                           return true;
+                                       }
+
+                                       if (event == ftxui::Event::Return && !top_active)
+                                       {
+                                           bottom_view->submit_selected_line();
+                                           return true;
+                                       }
+
+                                       if (event.is_mouse())
+                                       {
+                                           const auto mouse = event.mouse();
+                                           if (mouse.button == ftxui::Mouse::WheelUp)
+                                           {
+                                               scroll_active_up();
+                                               return true;
+                                           }
+
+                                           if (mouse.button == ftxui::Mouse::WheelDown)
+                                           {
+                                               scroll_active_down();
+                                               return true;
+                                           }
+
+                                           if (mouse.button == ftxui::Mouse::Left && mouse.motion == ftxui::Mouse::Pressed)
+                                           {
+                                               if (top_view->text_position_at(mouse.x, mouse.y).has_value())
+                                               {
+                                                   top_active = true;
+                                                   return true;
+                                               }
+
+                                               const auto bottom_position = bottom_view->text_position_at(mouse.x, mouse.y);
+                                               if (bottom_position.has_value())
+                                               {
+                                                   top_active = false;
+                                                   bottom_view->select_line_at(*bottom_position);
+                                                   return true;
+                                               }
+                                           }
                                        }
 
                                        return false;

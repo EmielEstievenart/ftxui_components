@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <ftxui/component/event.hpp>
 #include <ftxui/screen/color.hpp>
 #include <optional>
 #include <string>
@@ -59,13 +58,6 @@ struct TextViewRenderData
     std::vector<TextViewRangeDecoration> range_decorations;
 };
 
-// Result of handling an input event in the text view controller.
-struct TextViewEventResult
-{
-    bool handled      = false;
-    bool request_exit = false;
-};
-
 class TextViewController
 {
 public:
@@ -121,12 +113,6 @@ public:
     // --- Clipboard ---
 
     [[nodiscard]] bool copy_selection_to_clipboard() const;
-
-    // --- Event handling ---
-
-    // Dispatch a keyboard or mouse event.
-    // mouse_to_text_position converts mouse screen coordinates to model-space text positions.
-    TextViewEventResult parse_event(ftxui::Event event, const std::function<std::optional<TextViewPosition>(const ftxui::Mouse&)>& mouse_to_text_position = {});
 
     // --- Render ---
 

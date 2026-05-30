@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <ftxui/component/captured_mouse.hpp>
 #include <ftxui/dom/canvas.hpp>
 
 TextViewComponent::TextViewComponent(TextViewComponentOption option)
@@ -46,143 +45,7 @@ ftxui::Element TextViewComponent::OnRender()
                ftxui::flex;
     }
 
-    return body | ftxui::border | ftxui::reflect(_box);
-}
-
-bool TextViewComponent::OnEvent(ftxui::Event event)
-{
-    if (!event.is_mouse() && !Focused())
-    {
-        return false;
-    }
-
-    if (!handle_mouse_focus(event))
-    {
-        return false;
-    }
-
-    return handle_selectable_event(event) || handle_text_view_event(event);
-}
-
-bool TextViewComponent::handle_event(ftxui::Event event)
-{
-    return handle_selectable_event(event) || handle_text_view_event(event);
-}
-
-bool TextViewComponent::handle_mouse_focus(ftxui::Event event)
-{
-    if (!event.is_mouse())
-    {
-        return true;
-    }
-
-    const bool inside = _box.Contain(event.mouse().x, event.mouse().y);
-    if (!inside && !_captured_mouse)
-    {
-        return false;
-    }
-
-    if (inside && event.mouse().button == ftxui::Mouse::Left && event.mouse().motion == ftxui::Mouse::Pressed)
-    {
-        _captured_mouse = CaptureMouse(event);
-        TakeFocus();
-    }
-
-    return true;
-}
-
-bool TextViewComponent::handle_selectable_event(ftxui::Event event)
-{
-    if (_selectable && _selected_line.has_value())
-    {
-        const int page_step = std::max(1, _controller.viewport_line_count() - 1);
-        if (event.is_mouse() && event.mouse().button == ftxui::Mouse::WheelUp)
-        {
-            _controller.scroll_up(_selector_step);
-            set_selected_line(*_selected_line - _selector_step, false, -1);
-            return true;
-        }
-        if (event.is_mouse() && event.mouse().button == ftxui::Mouse::WheelDown)
-        {
-            _controller.scroll_down(_selector_step);
-            set_selected_line(*_selected_line + _selector_step, false, 1);
-            return true;
-        }
-        if (event == ftxui::Event::ArrowUp)
-        {
-            move_selected_line(-_selector_step);
-            return true;
-        }
-        if (event == ftxui::Event::ArrowDown)
-        {
-            move_selected_line(_selector_step);
-            return true;
-        }
-        if (event == ftxui::Event::PageUp)
-        {
-            set_selected_line(*_selected_line - page_step, true, -1);
-            return true;
-        }
-        if (event == ftxui::Event::PageDown)
-        {
-            set_selected_line(*_selected_line + page_step, true, 1);
-            return true;
-        }
-        if (event == ftxui::Event::Home)
-        {
-            set_selected_line(0, true);
-            return true;
-        }
-        if (event == ftxui::Event::End)
-        {
-            set_selected_line(max_selectable_line(), true, -1);
-            return true;
-        }
-        if (event == ftxui::Event::Return)
-        {
-            if (_on_selected_line_submitted)
-            {
-                _on_selected_line_submitted(*_selected_line);
-            }
-            return true;
-        }
-
-        if (event.is_mouse() && event.mouse().button == ftxui::Mouse::Left && event.mouse().motion == ftxui::Mouse::Pressed)
-        {
-            const TextViewRenderData data = _controller.render_data();
-            const auto position           = _view.mouse_to_text_position(data, event.mouse());
-            if (position.has_value())
-            {
-                set_selected_line(position->line_index, true, -1);
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-bool TextViewComponent::handle_text_view_event(ftxui::Event event)
-{
-    const TextViewRenderData data = _controller.render_data();
-    const TextViewEventResult result = _controller.parse_event(event, [&](const ftxui::Mouse& mouse) { return _view.mouse_to_text_position(data, mouse); });
-
-    if (event.is_mouse() && event.mouse().motion == ftxui::Mouse::Released)
-    {
-        _captured_mouse.reset();
-    }
-
-    return result.handled;
-}
-
-bool TextViewComponent::Focusable() const
-{
-    return true;
-}
-
-bool TextViewComponent::focused() const
-{
-    return Focused();
+    return body | ftxui::border;
 }
 
 std::optional<int> TextViewComponent::selected_line() const
@@ -198,6 +61,11 @@ TextViewController& TextViewComponent::controller()
 const TextViewController& TextViewComponent::controller() const
 {
     return _controller;
+}
+
+std::optional<TextViewPosition> TextViewComponent::text_position_at(int x, int y) const
+{
+    return _view.text_position_at(_controller.render_data(), x, y);
 }
 
 void TextViewComponent::update_content_size(int total_line_count, int max_line_width)
@@ -251,6 +119,101 @@ void TextViewComponent::set_selector_step(int selector_step)
 void TextViewComponent::set_selected_line(int line_index, bool keep_visible)
 {
     set_selected_line(line_index, keep_visible, -1);
+}
+
+void TextViewComponent::select_line_at(TextViewPosition position, bool keep_visible)
+{
+    set_selected_line(position.line_index, keep_visible, -1);
+}
+
+void TextViewComponent::select_previous()
+{
+    move_selected_line(-_selector_step);
+}
+
+void TextViewComponent::select_next()
+{
+    move_selected_line(_selector_step);
+}
+
+void TextViewComponent::page_selected_up()
+{
+    if (!_selected_line.has_value())
+    {
+        return;
+    }
+
+    const int page_step = std::max(1, _controller.viewport_line_count() - 1);
+    set_selected_line(*_selected_line - page_step, true, -1);
+}
+
+void TextViewComponent::page_selected_down()
+{
+    if (!_selected_line.has_value())
+    {
+        return;
+    }
+
+    const int page_step = std::max(1, _controller.viewport_line_count() - 1);
+    set_selected_line(*_selected_line + page_step, true, 1);
+}
+
+void TextViewComponent::select_first_line()
+{
+    set_selected_line(0, true);
+}
+
+void TextViewComponent::select_last_line()
+{
+    set_selected_line(max_selectable_line(), true, -1);
+}
+
+void TextViewComponent::submit_selected_line() const
+{
+    if (_selected_line.has_value() && _on_selected_line_submitted)
+    {
+        _on_selected_line_submitted(*_selected_line);
+    }
+}
+
+void TextViewComponent::scroll_up(int amount)
+{
+    _controller.scroll_up(amount);
+}
+
+void TextViewComponent::scroll_down(int amount)
+{
+    _controller.scroll_down(amount);
+}
+
+void TextViewComponent::page_up()
+{
+    _controller.page_up();
+}
+
+void TextViewComponent::page_down()
+{
+    _controller.page_down();
+}
+
+void TextViewComponent::scroll_to_top()
+{
+    _controller.scroll_to_top();
+}
+
+void TextViewComponent::scroll_to_bottom()
+{
+    _controller.scroll_to_bottom();
+}
+
+void TextViewComponent::scroll_left(int amount)
+{
+    _controller.scroll_left(amount);
+}
+
+void TextViewComponent::scroll_right(int amount)
+{
+    _controller.scroll_right(amount);
 }
 
 void TextViewComponent::move_selected_line(int delta)

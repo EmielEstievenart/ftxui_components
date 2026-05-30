@@ -3,7 +3,6 @@
 #include <functional>
 #include <optional>
 
-#include <ftxui/component/mouse.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/box.hpp>
 #include <ftxui/dom/canvas.hpp>
@@ -20,7 +19,7 @@ public:
     [[nodiscard]] ftxui::Element render(const TextViewRenderData& data, const RenderCallback& draw_content);
     [[nodiscard]] int viewport_line_count() const;
     [[nodiscard]] int viewport_col_count() const;
-    [[nodiscard]] std::optional<TextViewPosition> mouse_to_text_position(const TextViewRenderData& data, const ftxui::Mouse& mouse) const;
+    [[nodiscard]] std::optional<TextViewPosition> text_position_at(const TextViewRenderData& data, int x, int y) const;
 
 private:
     [[nodiscard]] TextViewRenderData normalize_render_data(TextViewRenderData data) const;

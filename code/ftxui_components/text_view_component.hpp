@@ -7,8 +7,6 @@
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_base.hpp>
-#include <ftxui/component/event.hpp>
-#include <ftxui/component/mouse.hpp>
 #include <ftxui/dom/elements.hpp>
 
 #include <ftxui_components/text_view_controller.hpp>
@@ -34,25 +32,35 @@ public:
     explicit TextViewComponent(TextViewComponentOption option);
 
     ftxui::Element OnRender() override;
-    bool OnEvent(ftxui::Event event) override;
-    bool Focusable() const override;
 
-    [[nodiscard]] bool focused() const;
     [[nodiscard]] std::optional<int> selected_line() const;
     [[nodiscard]] TextViewController& controller();
     [[nodiscard]] const TextViewController& controller() const;
-    bool handle_event(ftxui::Event event);
+    [[nodiscard]] std::optional<TextViewPosition> text_position_at(int x, int y) const;
     void update_content_size(int total_line_count, int max_line_width);
     void set_selectable(bool selectable);
     void set_selector_step(int selector_step);
     void set_selected_line(int line_index, bool keep_visible);
+    void select_line_at(TextViewPosition position, bool keep_visible = true);
+    void select_previous();
+    void select_next();
+    void page_selected_up();
+    void page_selected_down();
+    void select_first_line();
+    void select_last_line();
+    void submit_selected_line() const;
+    void move_selected_line(int delta);
+    void scroll_up(int amount = 1);
+    void scroll_down(int amount = 1);
+    void page_up();
+    void page_down();
+    void scroll_to_top();
+    void scroll_to_bottom();
+    void scroll_left(int amount = 1);
+    void scroll_right(int amount = 1);
 
 private:
-    bool handle_mouse_focus(ftxui::Event event);
-    bool handle_selectable_event(ftxui::Event event);
-    bool handle_text_view_event(ftxui::Event event);
     void set_selected_line(int line_index, bool keep_visible, int alignment_direction);
-    void move_selected_line(int delta);
     void keep_selected_line_visible();
     void notify_selected_line_changed() const;
     [[nodiscard]] int max_selected_line() const;
@@ -69,8 +77,6 @@ private:
     std::optional<int> _selected_line;
     std::function<void(int)> _on_selected_line_changed;
     std::function<void(int)> _on_selected_line_submitted;
-    ftxui::Box _box;
-    ftxui::CapturedMouse _captured_mouse;
 };
 
 ftxui::Component TextView(TextViewComponentOption option);

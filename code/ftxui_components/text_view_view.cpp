@@ -1,7 +1,6 @@
 #include <ftxui_components/text_view_view.hpp>
 
 #include <ftxui/component/event.hpp>
-#include <ftxui/component/mouse.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
@@ -303,7 +302,7 @@ int TextViewView::viewport_col_count() const
     return measured_viewport_extent(_content_box.x_min, _content_box.x_max);
 }
 
-std::optional<TextViewPosition> TextViewView::mouse_to_text_position(const TextViewRenderData& input_data, const ftxui::Mouse& mouse) const
+std::optional<TextViewPosition> TextViewView::text_position_at(const TextViewRenderData& input_data, int x, int y) const
 {
     const TextViewRenderData data = normalize_render_data(input_data);
     if (data.total_lines == 0 || viewport_line_count() == 0 || viewport_col_count() == 0)
@@ -311,19 +310,19 @@ std::optional<TextViewPosition> TextViewView::mouse_to_text_position(const TextV
         return std::nullopt;
     }
 
-    if (mouse.x < _content_box.x_min || mouse.x > _content_box.x_max || mouse.y < _content_box.y_min || mouse.y > _content_box.y_max)
+    if (x < _content_box.x_min || x > _content_box.x_max || y < _content_box.y_min || y > _content_box.y_max)
     {
         return std::nullopt;
     }
 
-    const int row        = mouse.y - _content_box.y_min;
+    const int row        = y - _content_box.y_min;
     const int line_index = data.first_visible_line + row;
     if (row < 0 || row >= data.viewport_line_count || line_index < 0 || line_index >= data.total_lines)
     {
         return std::nullopt;
     }
 
-    const int column = data.first_visible_col + std::max(0, mouse.x - _content_box.x_min);
+    const int column = data.first_visible_col + std::max(0, x - _content_box.x_min);
 
     TextViewPosition position;
     position.line_index = line_index;
