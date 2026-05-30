@@ -87,14 +87,14 @@ std::shared_ptr<TextViewComponent> make_text_view(const std::string& title, cons
                                                   std::function<void(int)> on_selected_line_submitted = {})
 {
     TextViewComponentOption option;
-    option.total_line_count           = static_cast<int>(lines.size());
-    option.widest_line_width          = max_line_width(lines);
     option.draw_content               = draw_lines(lines, selected_line);
     option.title                      = title;
-    option.configure_controller       = [highlight_color](TextViewController& controller) { controller.set_background_column_range(5, 16, highlight_color); };
-    option.selectable                 = selected_line != nullptr;
     option.on_selected_line_submitted = std::move(on_selected_line_submitted);
-    return std::make_shared<TextViewComponent>(std::move(option));
+    auto view                         = std::make_shared<TextViewComponent>(std::move(option));
+    view->controller().set_background_column_range(5, 16, highlight_color);
+    view->set_selectable(selected_line != nullptr);
+    view->update_content_size(static_cast<int>(lines.size()), max_line_width(lines));
+    return view;
 }
 
 ftxui::Element focus_label(const std::string& label, bool active)

@@ -6,25 +6,8 @@
 #include <ftxui/dom/canvas.hpp>
 
 TextViewComponent::TextViewComponent(TextViewComponentOption option)
-    : _draw_content(std::move(option.draw_content))
-    , _title(std::move(option.title))
-    , _total_line_count(option.total_line_count)
-    , _selectable(option.selectable)
-    , _selector_step(std::max(1, option.selector_step))
-    , _on_selected_line_changed(std::move(option.on_selected_line_changed))
-    , _on_selected_line_submitted(std::move(option.on_selected_line_submitted))
+    : _draw_content(std::move(option.draw_content)), _title(std::move(option.title)), _on_selected_line_changed(std::move(option.on_selected_line_changed)), _on_selected_line_submitted(std::move(option.on_selected_line_submitted))
 {
-    _controller.set_content(option.total_line_count, option.widest_line_width);
-    if (_selectable && _total_line_count > 0)
-    {
-        _selected_line = 0;
-        notify_selected_line_changed();
-    }
-
-    if (option.configure_controller)
-    {
-        option.configure_controller(_controller);
-    }
 }
 
 ftxui::Element TextViewComponent::OnRender()
